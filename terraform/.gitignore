@@ -1,0 +1,15 @@
+# Terraform 관련
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform.tfvars.example
+
+# 민감 정보
+*.pem
+*.key
+
+# OS
+.DS_Store
+Thumbs.db
