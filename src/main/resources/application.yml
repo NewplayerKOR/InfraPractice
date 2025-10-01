@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: back
+  
+  # 활성화할 프로파일 설정 (기본값: dev)
+  profiles:
+    active: ${SPRING_PROFILE:dev}
+  
+  # JPA 공통 설정
+  jpa:
+    open-in-view: false  # OSIV(Open Session In View) 비활성화로 성능 최적화
+    properties:
+      hibernate:
+        format_sql: true  # SQL 포맷팅
+        use_sql_comments: true  # SQL에 주석 추가
+
+# 로깅 설정
+logging:
+  level:
+    root: INFO
+    com.back: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+# 서버 설정
+server:
+  port: 8080
+  servlet:
+    context-path: /
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+# Actuator 설정 (헬스 체크용)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized

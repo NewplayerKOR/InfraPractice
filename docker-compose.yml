@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # MySQL 데이터베이스
+  mysql:
+    image: mysql:8.0
+    container_name: back-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Seoul
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d  # 초기화 SQL 스크립트
+    networks:
+      - back-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+
+  # Spring Boot 애플리케이션
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: back-app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy  # MySQL이 준비될 때까지 대기
+    environment:
+      SPRING_PROFILE: ${SPRING_PROFILE:-prod}
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-backdb}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m}
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    networks:
+      - back-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/users/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# 네트워크 정의
+networks:
+  back-network:
+    driver: bridge
+
+# 볼륨 정의 (데이터 영속성)
+volumes:
+  mysql-data:
+    driver: local
+
+# docker-compose.yml 설명:
+# 
+# 사용 방법:
+# 1. 전체 서비스 시작: docker-compose up -d
+# 2. 로그 확인: docker-compose logs -f
+# 3. 특정 서비스 로그: docker-compose logs -f app
+# 4. 서비스 중지: docker-compose down
+# 5. 볼륨까지 삭제: docker-compose down -v
+#
+# 주요 기능:
+# - MySQL과 Spring Boot 앱을 함께 실행
+# - 헬스체크로 서비스 상태 모니터링
+# - depends_on으로 시작 순서 제어
+# - 볼륨을 통한 데이터 영속성
+# - 네트워크 격리로 보안 강화
+# - 환경변수로 설정 관리
